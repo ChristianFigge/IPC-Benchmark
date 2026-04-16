@@ -1,6 +1,6 @@
 use ipc_benchmark::{BUF_SIZE_BYTES, get_timestamp_ns};
 use std::env;
-use std::io::{self, Write, Error, ErrorKind};
+use std::io::{self, Write, Error, ErrorKind, Read};
 
 fn main() -> io::Result<()> {
     // Get size of message to transmit from args
@@ -20,19 +20,18 @@ fn main() -> io::Result<()> {
             } else { n }
         }
     };
-
-    // Status print using stderr, so it doesnt get into the pipe
-    eprintln!("Tx is about to write {remaining_msg_size} bytes to stdout");
-
-    // Create data buffer & Stamp the current time into the first 8 bytes
+    // Create data buffer
     let mut buffer = [42u8; BUF_SIZE_BYTES];
+    eprintln!("Tx is ready to write {remaining_msg_size} bytes to stdout");
+
+    // SYNC: Wait for "Go" Signal from main process
+    io::stdin().read_exact(&mut [0u8; 1])?;
+    
+    // Stamp the current time into the first 8 bytes
     buffer[0..8].copy_from_slice(&get_timestamp_ns().to_le_bytes());
 
     // TRANSMIT DATA OVER PIPE
-    // Get a stdout handle
     let mut stdout = io::stdout();
-
-    // Stream data to stdout into the pipe
     while remaining_msg_size > 0 {
         let to_write = remaining_msg_size.min(BUF_SIZE_BYTES);
         stdout.write_all(&buffer[..to_write])?;
