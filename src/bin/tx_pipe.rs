@@ -2,8 +2,6 @@ use ipc_benchmark::{BUF_SIZE_BYTES, get_timestamp_ns};
 use std::env;
 use std::io::{self, Write, Error, ErrorKind};
 
-const BUF_SIZE_U64: usize = BUF_SIZE_BYTES / size_of::<u64>();
-
 fn main() -> io::Result<()> {
     // Get size of message to transmit from args
     let args: Vec<String> = env::args().collect();
@@ -23,24 +21,12 @@ fn main() -> io::Result<()> {
         }
     };
 
-    // Create data buffer; u64 is needed for the timestamp
-    let mut arr = [0u64; BUF_SIZE_U64]; //[get_timestamp_ns(); BUF_SIZE_U64];
+    // Status print using stderr, so it doesnt get into the pipe
+    eprintln!("Tx is about to write {remaining_msg_size} bytes to stdout");
 
-    // Get a *u8 view on an u64 array for stdout.write_all()
-    // Endian-safe alternative with a bit more overhead: timestamp.to_le_bytes() + for i in 0..8
-    // or use the bytemuck crate
-    let buffer: &[u8] =
-        unsafe { std::slice::from_raw_parts(arr.as_ptr() as *const u8, BUF_SIZE_BYTES) };
-
-    // Use stderr for status prints, so it doesnt get into the pipe
-    eprintln!(
-        "Tx is about to write {} bytes to stdout",
-        remaining_msg_size
-    );
-
-    // Stamp the current time into the first 8 bytes
-    #[allow(unused_assignments)] // Avoid Compiler confusion (it thinks arr is unused)
-    { arr[0] = get_timestamp_ns(); }
+    // Create data buffer & Stamp the current time into the first 8 bytes
+    let mut buffer = [42u8; BUF_SIZE_BYTES];
+    buffer[0..8].copy_from_slice(&get_timestamp_ns().to_le_bytes());
 
     // TRANSMIT DATA OVER PIPE
     // Get a stdout handle
