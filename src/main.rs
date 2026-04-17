@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
-use ipc_benchmark::{to_microsecs};
+use ipc_benchmark::{mean, stddev, to_microsecs};
 
 // Predefine IPC message lengths to bench & number of samples to collect
 // (maybe as CLI args for main binary?)
@@ -69,7 +69,13 @@ fn main() {
             //println!("tx exited with: {} \nrx exited with: {}", tx_status.code().unwrap(), rx_status.code().unwrap());
         }
 
-        eprintln!("Durations in μs: {:?}\n", samples);
+        eprintln!("Durations in μs: {:?}", samples);
+
+        // Calculate mean and stddev
+        let samples_mean = mean(&samples).unwrap();
+        let samples_stddev = stddev(&samples, samples_mean).unwrap();
+        eprintln!("Mean: {samples_mean:.3}, StdDev: {samples_stddev:.3}\n");
+
         // TODO log samples somewhere
         samples.clear();
     }
