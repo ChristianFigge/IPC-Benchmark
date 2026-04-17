@@ -1,8 +1,9 @@
 // Shared stuff
 
+use std::io::{Error, ErrorKind};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const BUF_SIZE_BYTES: usize = 4096; // Better be a multiple of 8
+pub const BUF_SIZE: usize = 4096;
 
 #[inline(always)]
 pub fn to_microsecs(nanosecs: u64) -> f64 {
@@ -16,4 +17,9 @@ pub fn get_timestamp_ns() -> u64 {
     .unwrap()
     .as_nanos()
     as u64
+}
+
+#[inline(always)]
+pub fn args_error(msg: String) -> Result<(), Error> {
+    Err(Error::new(ErrorKind::InvalidInput, msg))
 }
