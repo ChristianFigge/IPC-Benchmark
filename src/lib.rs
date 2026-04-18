@@ -32,10 +32,10 @@ pub fn mean(v: &[f64]) -> Option<f64> {
 
 #[inline(always)]
 pub fn stddev(v: &[f64], mean: f64) -> Option<f64> {
-    if v.is_empty() { return None }
+    if v.is_empty() || v.len() == 1 { return None }
     let mut sum = 0.0;
     for val in v {
         sum += (val - mean).powi(2);
     }
-    Some((sum / (v.len() as f64)).sqrt())
+    Some((sum / (v.len() - 1) as f64).sqrt())
 }
