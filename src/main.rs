@@ -11,7 +11,7 @@ const MSG_SIZES: [usize; 5] = [
     256 * 1024,
     1024 * 1024,
 ];
-const N_SAMPLES: usize = 100;
+const N_SAMPLES: usize = 500;
 
 /** PIPE SPEED BENCH
  * Starts programs Tx, Rx and pipes Tx output into Rx.
@@ -68,7 +68,7 @@ fn main() {
             // TODO panic if tx_stats != 0 && rx_status != 0
             //println!("tx exited with: {} \nrx exited with: {}", tx_status.code().unwrap(), rx_status.code().unwrap());
         }
-        eprintln!("Durations in μs: {:?}", samples);
+        //eprintln!("Durations in μs: {:?}", samples);
         handle_samples(&samples);
         samples.clear();
     }
