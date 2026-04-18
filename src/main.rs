@@ -17,6 +17,7 @@ const N_SAMPLES: usize = 100;
  * Starts programs Tx, Rx and pipes Tx output into Rx.
  * Synchronizes the processes with ready/go-Signals
  * and then waits for the sample from Rx.
+ * (The actual measurements are done by Tx & Rx)
 */
 fn main() {
     // Get current build profile to match the paths to Rx/Tx binaries
@@ -26,7 +27,6 @@ fn main() {
     let mut sample_buf = [0u8; 8];
     let mut samples : Vec<f64> = Vec::with_capacity(N_SAMPLES);
 
-    // TODO iterate over MSG_SIZES...
     for msg_size in MSG_SIZES.iter() {
         println!("Piping {} * {} Bytes ...", N_SAMPLES, msg_size);
         for _ in 0..N_SAMPLES {
@@ -68,15 +68,20 @@ fn main() {
             // TODO panic if tx_stats != 0 && rx_status != 0
             //println!("tx exited with: {} \nrx exited with: {}", tx_status.code().unwrap(), rx_status.code().unwrap());
         }
-
         eprintln!("Durations in μs: {:?}", samples);
-
-        // Calculate mean and stddev
-        let samples_mean = mean(&samples).unwrap();
-        let samples_stddev = stddev(&samples, samples_mean).unwrap();
-        eprintln!("Mean: {samples_mean:.3}, StdDev: {samples_stddev:.3}\n");
-
-        // TODO log samples somewhere
+        handle_samples(&samples);
         samples.clear();
     }
+}
+
+fn handle_samples(samples: &[f64]) -> () {
+    // Calculate mean, stddev, coefficient of variation (cv) and relative standard error (rse)
+    let mean = mean(&samples).unwrap();
+    let stddev = stddev(&samples, mean).unwrap();
+    let cv = stddev / mean;
+    let rse = cv / (samples.len() as f64).sqrt();
+
+    eprintln!("Mean: {mean:.1}μs, StdDev: {stddev:.1}μs -> CV = {cv:.3}, RSE = {rse:.3} \n");
+
+    // TODO log samples somewhere
 }
