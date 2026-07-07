@@ -113,8 +113,9 @@ fn handle_samples(samples: &[u64], msg_size: usize, cycles_per_nanosecond: f64) 
 
     eprintln!(
         "Mean: {mean_cycles:.1} cycles ({mean_ns:.1} ns), StdDev: {std_cycles:.1} cycles ({std_ns:.1} ns)\n\
-        -> CV = {cv:.3}, RSE = {rse:.3} \n\
-        -> Mean Transfer Rate: {mean_rate_bit_per_ns:.5} bit/ns \n"
+        -> Coefficient of Variation: {cv:.3}\n\
+        -> Relative Standard Error: {rse:.3}\n\
+        -> Mean Transfer Rate: {mean_rate_bit_per_ns:.5} bit/ns\n"
     );
 
     // TODO log samples somewhere
