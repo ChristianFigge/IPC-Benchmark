@@ -20,69 +20,53 @@ const N_SAMPLES: usize = 500;
  * and then waits for the sample from Rx.
  * (The actual measurements are done by Tx & Rx)
 */
-fn main() {
-    // Check hardware support for invariant TSC
-    if !hardware_is_supported() {
-        panic!("This benchmark requires an x86_64 CPU with RDTSCP and invariant TSC support!");
-    }
-
-    // Get current build profile to match the paths to Rx/Tx binaries
-    let build_profile = if cfg!(debug_assertions) { "debug" } else { "release" };
-
+fn pipe_speed_bench(samples: &mut [u64; N_SAMPLES], msg_size: usize, build_profile: &str) -> () {
     let tx_path = format!("target/{build_profile}/tx_pipe");
     let rx_path = format!("target/{build_profile}/rx_pipe");
     let mut sample_buf = [0u8; 8];
-    //let mut samples : Vec<f64> = Vec::with_capacity(N_SAMPLES);
-    let mut samples: Vec<u64> = Vec::with_capacity(N_SAMPLES);
 
-    for msg_size in MSG_SIZES.iter() {
-        println!("Piping {} * {} Bytes ...", N_SAMPLES, msg_size);
-        for _ in 0..N_SAMPLES {
-            // Tx takes the msg size as a command line argument
-            let mut tx = Command::new(tx_path.clone())
-                .args(&[msg_size.to_string()])
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .spawn()
-                .expect("Failed to start Tx");
+    println!("Piping {} * {} Bytes ...(from {} to {})", N_SAMPLES, msg_size, tx_path, rx_path);
+    for i in 0..N_SAMPLES {
+        // Tx takes the msg size as a command line argument
+        let mut tx = Command::new(tx_path.clone())
+            .args(&[msg_size.to_string()])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed to start Tx");
 
-            let mut rx = Command::new(rx_path.clone())
-                .stdin(tx.stdout.take().unwrap())
-                .stdout(Stdio::piped())
-                .spawn()
-                .expect("Failed to start Rx");
+        let mut rx = Command::new(rx_path.clone())
+            .stdin(tx.stdout.take().unwrap())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed to start Rx");
 
-            // SYNCHRONIZE both processes:
-            // Corrects the timestamps made by Tx/Rx, so the measured duration includes less overhead
-            // 1. Wait for Rx "Ready" Signal
-            let mut rx_out = rx.stdout.take().unwrap();
-            rx_out
-                .read_exact(&mut [0u8; 1])
-                .expect("Failed to get Sync Signal from Rx");
+        // SYNCHRONIZE both processes:
+        // Corrects the timestamps made by Tx/Rx, so the measured duration includes less overhead
+        // 1. Wait for Rx "Ready" Signal
+        let mut rx_out = rx.stdout.take().unwrap();
+        rx_out
+            .read_exact(&mut [0u8; 1])
+            .expect("Failed to get Sync Signal from Rx");
 
-            // 2. Send "GO" Signal to Tx, which waits for it
-            let tx_in = tx.stdin.as_mut().unwrap();
-            tx_in
-                .write(&[1u8])
-                .expect("Failed to send Sync Signal to Tx");
+        // 2. Send "GO" Signal to Tx, which waits for it
+        let tx_in = tx.stdin.as_mut().unwrap();
+        tx_in
+            .write(&[1u8])
+            .expect("Failed to send Sync Signal to Tx");
 
-            // Wait for Rx to return a Sample & Save it in vector
-            rx_out
-                .read_exact(&mut sample_buf)
-                .expect("Failed to read Rx Sample");
-            //samples.push(to_microsecs(u64::from_le_bytes(sample_buf)));
-            samples.push(u64::from_le_bytes(sample_buf));
+        // Wait for Rx to return a Sample & Save it in vector
+        rx_out
+            .read_exact(&mut sample_buf)
+            .expect("Failed to read Rx Sample");
+        samples[i] = u64::from_le_bytes(sample_buf);
 
-            // Wait for both processes to finish
-            let _tx_status = tx.wait().unwrap();
-            let _rx_status = rx.wait().unwrap();
+        // Wait for both processes to finish
+        let _tx_status = tx.wait().unwrap();
+        let _rx_status = rx.wait().unwrap();
 
-            // TODO panic if tx_stats != 0 && rx_status != 0
-            //println!("tx exited with: {} \nrx exited with: {}", tx_status.code().unwrap(), rx_status.code().unwrap());
-        }
-        //eprintln!("Durations in CPU-cycles: {:?}", samples);
-        handle_samples(&samples);
-        samples.clear();
+        // TODO panic if tx_stats != 0 && rx_status != 0
+        //println!("tx exited with: {} \nrx exited with: {}", tx_status.code().unwrap(), rx_status.code().unwrap());
     }
 }
 
@@ -127,5 +111,23 @@ fn hardware_is_supported() -> bool {
         let supports_invariant_tsc = (leaf_7.edx & invariant_tsc_bit) != 0;
 
         supports_rdtscp && supports_invariant_tsc
+    }
+}
+
+
+fn main() {
+    // Check hardware support for invariant TSC
+    if !hardware_is_supported() {
+        panic!("This benchmark requires an x86_64 CPU with RDTSCP and invariant TSC support!");
+    }
+
+    // Get current build profile to match the binary paths
+    let build_profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+    let mut samples= [0u64; N_SAMPLES];
+
+    // BENCHMARK PIPE SPEED
+    for msg_size in MSG_SIZES.iter() {
+        pipe_speed_bench(&mut samples, *msg_size, build_profile);
+        handle_samples(&samples);
     }
 }
