@@ -22,7 +22,7 @@ fn main() -> io::Result<()> {
         if timestamp_guard < 8 { timestamp_guard = 8.min(total_bytes_read); }
     }
     // Data fully received; create timestamp
-    let receive_time = get_timestamp_ns();
+    let receive_time = read_tsc();
 
     if total_bytes_read >= 8 {
         // Tx stored a timestamp in the first 8 bytes of every BUF_SIZEd message-chunk,

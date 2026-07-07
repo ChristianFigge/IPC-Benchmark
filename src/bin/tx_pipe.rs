@@ -1,4 +1,4 @@
-use ipc_benchmark::{BUF_SIZE, get_timestamp_ns, args_error};
+use ipc_benchmark::{BUF_SIZE, read_tsc, args_error};
 use std::env;
 use std::io::{self, Write, Read};
 
@@ -24,7 +24,7 @@ fn main() -> io::Result<()> {
     io::stdin().read_exact(&mut [0u8; 1])?;
     
     // Stamp the current time into the first 8 bytes
-    buffer[0..8].copy_from_slice(&get_timestamp_ns().to_le_bytes());
+    buffer[0..8].copy_from_slice(&read_tsc().to_le_bytes());
 
     // Transmit data over pipe
     let mut stdout = io::stdout();
